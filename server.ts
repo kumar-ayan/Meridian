@@ -49,8 +49,9 @@ async function callGeminiStructured<T>(
   const startTime = Date.now();
   try {
     const ai = getGenAIClient();
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: modelName,
       contents: prompt,
       config: {
         systemInstruction,
@@ -881,7 +882,8 @@ app.post('/api/agents/orchestrate', async (req, res) => {
 
   try {
     // 1. Run Financial, News, Risk in parallel
-    const host = req.headers.host || `localhost:${PORT}`;
+    const hostHeader = req.headers.host || '';
+    const host = hostHeader && !hostHeader.startsWith('0.0.0.0') ? hostHeader : `127.0.0.1:${PORT}`;
     const baseUrl = `http://${host}`;
 
     const [finRes, newsRes, riskRes] = await Promise.all([

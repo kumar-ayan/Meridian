@@ -4,49 +4,19 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Express](https://img.shields.io/badge/Express_4-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![Gemini 3.6 Flash](https://img.shields.io/badge/Gemini_3.6_Flash-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![OpenAI SDK](https://img.shields.io/badge/OpenAI_SDK-412991?style=for-the-badge&logo=openai&logoColor=white)](https://platform.openai.com/)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 > **Created and Owned Exclusively by Ayan kumar**
 
-**Meridian** is a full-stack, institutional-grade financial research, DCF valuation modeling, real-time market intelligence, and portfolio optimization platform powered by **6 specialized Gemini 3.6 AI agents**, a high-performance **Vector RAG Knowledge Base**, interactive **Discounted Cash Flow (DCF) Sandbox**, **Executive PDF Export engine**, and seamless **n8n Automation Webhooks**.
+**Meridian** is a full-stack, institutional-grade financial research, DCF valuation modeling, real-time market intelligence, and portfolio optimization platform powered by **6 specialized OpenAI SDK AI agents**, a high-performance **Vector RAG Knowledge Base**, interactive **Discounted Cash Flow (DCF) Sandbox**, **Executive PDF Export engine**, and seamless **n8n Automation Webhooks**.
 
 ---
 
 ## 🏛️ System Architecture
 
-```mermaid
-graph TD
-    User([User / Investment Analyst]) --> UI[React 19 + Tailwind CSS Frontend]
-    UI --> Header[Ticker Header & 30-Day Sparkline]
-    UI --> NavTab[6 Navigation Workspaces]
-    
-    NavTab --> AgentTab[Multi-Agent Research Pipeline]
-    NavTab --> NewsTab[Live News & Sentiment Feed]
-    NavTab --> PortTab[Portfolio Dashboard & Firestore]
-    NavTab --> DcfTab[Interactive DCF Valuation Sandbox]
-    NavTab --> RagTab[Vector RAG Knowledge Base Search]
-    NavTab --> N8nTab[n8n Automation Hub]
-    
-    UI --> Express[Express.js Server - port 3000]
-    
-    subgraph Multi-Agent Engine [Gemini 3.6 Multi-Agent Swarm]
-        Express --> Orchestrator[Orchestrator Supervisor Agent]
-        Orchestrator --> Agent1[Financial Statement Agent]
-        Orchestrator --> Agent2[News & Sentiment Agent]
-        Orchestrator --> Agent3[Valuation & DCF Agent]
-        Orchestrator --> Agent4[Risk Assessment Agent]
-        Orchestrator --> Agent5[Portfolio Advisor Agent]
-    end
-    
-    Express --> VectorRAG[Vector Chunking & Cosine Similarity Engine]
-    Express --> PdfGen[jsPDF Executive Report Generator]
-    Express --> N8nEngine[n8n Automation Webhook Gateway]
-    
-    VectorRAG --> SEC_Filings[(SEC 10-K / 10-Q & Transcripts Database)]
-    N8nEngine --> ExternalWebhooks[n8n Workflows & Discord / Slack Alerts]
-```
+![System Architecture & Data Flow](assets/data_flow.png)
 
 ---
 
@@ -74,7 +44,7 @@ Coordinated execution across **6 specialized AI agents** that work in parallel t
 ### 📚 4. Vector RAG Knowledge Base
 - Indexing Form 10-K, Form 10-Q, Form 8-K filings, earnings call transcripts, and equity analyst reports.
 - Real-time cosine similarity search retrieving exact grounded document chunks with source metadata, page numbers, and similarity metrics.
-- Seamless context injection into Gemini AI prompts to guarantee zero hallucinations.
+- Seamless context injection into OpenAI SDK prompts to guarantee zero hallucinations.
 
 ### ⚡ 5. n8n Automation Engine & Webhooks
 - Out-of-the-box integration with n8n workflow automation.

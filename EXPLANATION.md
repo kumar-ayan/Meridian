@@ -24,26 +24,9 @@ Meridian provides financial analysts, portfolio managers, and retail investors w
 4. **Live News Feed & Sentiment Gauge**: Streams business and market news with AI-computed sentiment scores (-1.0 to +1.0) and visual sentiment heat gauges.
 5. **Real-time Portfolio Tracking & Position Management**: Tracks portfolio holdings, P&L, sector concentration limits, and position sizing recommendations.
 6. **n8n Automation Hub**: Triggers automated webhooks, visualizes node graph workflows, and exports workflow JSON definitions.
-7. **Executive PDF Export**: Generates downloadable, multi-page executive research reports in standard PDF format.
+7. **Executive PDF Export**: Generates downloadable, multi-page executive research reports in standard PDF format.## ⚙️ How Meridian Works: Architecture & Data Flow
 
----
-
-## ⚙️ How Meridian Works: Architecture & Data Flow
-
-```
-                                  ┌────────────────────────┐
-                                  │      Ayan kumar        │
-                                  │   (Creator & Owner)    │
-                                  └───────────┬────────────┘
-                                              │
-┌─────────────────────────────────────────────▼─────────────────────────────────────────────┐
-│                                   React 19 Frontend App                                   │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐ │
-│  │ Multi-Agent Tab  │  │  Live News Feed  │  │ Portfolio Hub    │  │ DCF Valuation    │ │
-│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘ │
-└───────────┼─────────────────────┼─────────────────────┼─────────────────────┼─────────────┘
-            │                     │                     │                     │
-            └─────────────────────┴──────────┬──────────┴─────────────────────┘
+![System Architecture & Data Flow](assets/data_flow.png)�─────────┴──────────┬──────────┴─────────────────────┘
                                              │ HTTP REST Requests
                                   ┌──────────▼──────────┐
                                   │ Express.js Server   │ (server.ts)

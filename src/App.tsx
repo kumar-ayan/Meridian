@@ -223,7 +223,7 @@ export default function App() {
       <footer className="border-t border-slate-800/80 bg-slate-900/50 py-8 mt-16 text-xs text-slate-500 font-mono text-center">
         <div className="max-w-7xl mx-auto px-4">
           <p className="mb-2 text-slate-300 font-semibold">MERIDIAN • Multi-Agent AI Investment Research Platform • Created & Owned by Ayan kumar</p>
-          <p className="text-slate-500">Powered by Gemini 3.6 Flash &bull; Multi-Agent RAG Engine &bull; n8n Automation Engine &bull; Developed by Ayan kumar</p>
+          <p className="text-slate-500">Powered by OpenAI SDK Agents &bull; Multi-Agent RAG Engine &bull; n8n Automation Engine &bull; Developed by Ayan kumar</p>
         </div>
       </footer>
     </div>

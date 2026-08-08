@@ -10,7 +10,7 @@
 
 **Meridian** is a full-stack, institutional-grade equity research and portfolio intelligence platform designed to deliver quantitative financial analysis, DCF valuation modeling, real-time market sentiment analysis, risk assessment, and portfolio optimization.
 
-The platform utilizes a hybrid multi-agent orchestration model powered by the **Gemini 3.6 Flash API** (`@google/genai`) and Express backend service.
+The platform utilizes a hybrid multi-agent orchestration model powered by **OpenAI SDK Agents** (`openai`) and Express backend service.
 
 ---
 
@@ -50,7 +50,7 @@ The system features an integrated Vector RAG Knowledge Base indexing 15+ SEC fil
 ### How RAG Works in Meridian:
 - **Knowledge Store**: Contains SEC Form 10-K, Form 10-Q, Form 8-K filings, earnings call transcripts, and analyst research notes for major tickers (`NVDA`, `AAPL`, `MSFT`, `AMZN`, `GOOGL`, `META`, `TSLA`, `JPM`).
 - **Cosine Similarity Search**: Computes vector similarities between user natural language queries and chunked document embeddings.
-- **Context Injection**: Top relevant chunks are formatted into prompt context strings for Gemini API reasoning, eliminating hallucinations and ensuring factual grounding.
+- **Context Injection**: Top relevant chunks are formatted into prompt context strings for OpenAI SDK agent reasoning, eliminating hallucinations and ensuring factual grounding.
 
 ---
 
@@ -58,7 +58,7 @@ The system features an integrated Vector RAG Knowledge Base indexing 15+ SEC fil
 
 Meridian connects directly to external automation pipelines via **n8n Automation Engine**:
 - **Triggers**: Scheduled daily SEC filing watchers, event-driven sentiment alerts, portfolio rebalancing schedules, and earnings report triggers.
-- **Visual Pipeline Node Graph**: Provides interactive inspection of n8n node workflows (Webhook → HTTP Request → Gemini AI node → Discord/Slack alert).
+- **Visual Pipeline Node Graph**: Provides interactive inspection of n8n node workflows (Webhook → HTTP Request → OpenAI AI node → Discord/Slack alert).
 - **JSON Export**: Export n8n workflow definitions for immediate deployment to local or self-hosted n8n instances.
 
 ---
