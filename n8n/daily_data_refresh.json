@@ -1,0 +1,65 @@
+{
+  "name": "Meridian - Daily Market Fundamentals & Price Refresh",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 16 * * 1-5"
+            }
+          ]
+        }
+      },
+      "name": "Cron Schedule (Market Close 4:30 PM EST)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT symbol FROM portfolio_watchlists WHERE active = true;"
+      },
+      "name": "Fetch Watchlisted Tickers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://financialmodelingprep.com/api/v3/profile/{{ $json.symbol }}",
+        "options": {}
+      },
+      "name": "Financial Data API Pull",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meridian-api.internal/api/n8n/daily-refresh",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"ticker\": \"{{ $json.symbol }}\",\n  \"price\": {{ $json.price }},\n  \"peRatio\": {{ $json.pe }}\n}"
+      },
+      "name": "Upsert Meridian Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Cron Schedule (Market Close 4:30 PM EST)": {
+      "main": [[{ "node": "Fetch Watchlisted Tickers", "type": "main", "index": 0 }]]
+    },
+    "Fetch Watchlisted Tickers": {
+      "main": [[{ "node": "Financial Data API Pull", "type": "main", "index": 0 }]]
+    },
+    "Financial Data API Pull": {
+      "main": [[{ "node": "Upsert Meridian Database", "type": "main", "index": 0 }]]
+    }
+  }
+}

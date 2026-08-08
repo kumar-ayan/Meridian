@@ -1,0 +1,65 @@
+{
+  "name": "Meridian - Weekly Portfolio Digest Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * 0"
+            }
+          ]
+        }
+      },
+      "name": "Sunday 8:00 PM EST Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://meridian-api.internal/api/portfolio"
+      },
+      "name": "Fetch User Portfolio Holdings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meridian-api.internal/api/agents/portfolio",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"ticker\": \"PORTFOLIO_SCAN\",\n  \"currentHoldings\": {{ $json }}\n}"
+      },
+      "name": "Invoke Portfolio Advisor Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meridian-api.internal/api/n8n/weekly-digest"
+      },
+      "name": "Dispatch Weekly Email Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "Sunday 8:00 PM EST Trigger": {
+      "main": [[{ "node": "Fetch User Portfolio Holdings", "type": "main", "index": 0 }]]
+    },
+    "Fetch User Portfolio Holdings": {
+      "main": [[{ "node": "Invoke Portfolio Advisor Agent", "type": "main", "index": 0 }]]
+    },
+    "Invoke Portfolio Advisor Agent": {
+      "main": [[{ "node": "Dispatch Weekly Email Digest", "type": "main", "index": 0 }]]
+    }
+  }
+}

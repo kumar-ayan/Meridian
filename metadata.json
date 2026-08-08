@@ -1,0 +1,7 @@
+{
+  "name": "Meridian",
+  "author": "Ayan kumar",
+  "description": "Full-stack AI Investment Research Platform by Ayan kumar, powered by a multi-agent analysis engine, vector RAG pipeline, valuation sandbox, and n8n workflow automation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

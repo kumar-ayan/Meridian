@@ -1,0 +1,61 @@
+{
+  "name": "Meridian - Earnings & News Sentiment Watcher",
+  "nodes": [
+    {
+      "parameters": {
+        "unit": "minutes",
+        "value": 15
+      },
+      "name": "Poll Every 15 Mins",
+      "type": "n8n-nodes-base.interval",
+      "typeVersion": 1,
+      "position": [220, 280]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything?q=SEC+10-K+10-Q+earnings&apiKey=DEMO"
+      },
+      "name": "Poll SEC EDGAR & News API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [420, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meridian-api.internal/api/rag/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"ticker\": \"{{ $json.ticker }}\",\n  \"documentType\": \"News Article\",\n  \"text\": \"{{ $json.content }}\"\n}"
+      },
+      "name": "Embed Text to Qdrant Vector DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [620, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://meridian-api.internal/api/agents/news",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"ticker\": \"{{ $json.ticker }}\"\n}"
+      },
+      "name": "Trigger News Research Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [820, 280]
+    }
+  ],
+  "connections": {
+    "Poll Every 15 Mins": {
+      "main": [[{ "node": "Poll SEC EDGAR & News API", "type": "main", "index": 0 }]]
+    },
+    "Poll SEC EDGAR & News API": {
+      "main": [[{ "node": "Embed Text to Qdrant Vector DB", "type": "main", "index": 0 }]]
+    },
+    "Embed Text to Qdrant Vector DB": {
+      "main": [[{ "node": "Trigger News Research Agent", "type": "main", "index": 0 }]]
+    }
+  }
+}
