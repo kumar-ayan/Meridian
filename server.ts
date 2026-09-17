@@ -47,28 +47,33 @@ async function callGeminiStructured<T>(
   fallbackFn: () => T
 ): Promise<{ data: T; tokensUsed: number; executionTimeMs: number }> {
   const startTime = Date.now();
-  try {
-    const ai = getGenAIClient();
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-        temperature: 0.2
-      }
-    });
+  const apiKey = process.env.GEMINI_API_KEY;
+  const isKeyConfigured = apiKey && apiKey !== 'MY_GEMINI_API_KEY' && !apiKey.includes('MOCK') && apiKey.trim().length > 10;
 
-    const executionTimeMs = Date.now() - startTime;
-    const text = response.text || '';
-    if (text) {
-      const parsed = JSON.parse(text) as T;
-      return { data: parsed, tokensUsed: Math.round(text.length / 4), executionTimeMs };
+  if (isKeyConfigured) {
+    try {
+      const ai = getGenAIClient();
+      const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.2
+        }
+      });
+
+      const executionTimeMs = Date.now() - startTime;
+      const text = response.text || '';
+      if (text) {
+        const parsed = JSON.parse(text) as T;
+        return { data: parsed, tokensUsed: Math.round(text.length / 4), executionTimeMs };
+      }
+    } catch (err) {
+      console.warn('Gemini API call failed or schema parsing fallback used:', err);
     }
-  } catch (err) {
-    console.warn('Gemini API call failed or schema parsing fallback used:', err);
   }
 
   // Graceful structured fallback
@@ -883,7 +888,7 @@ app.post('/api/agents/orchestrate', async (req, res) => {
   try {
     // 1. Run Financial, News, Risk in parallel
     const hostHeader = req.headers.host || '';
-    const host = hostHeader && !hostHeader.startsWith('0.0.0.0') ? hostHeader : `127.0.0.1:${PORT}`;
+    const host = hostHeader && !hostHeader.startsWith('0.0.0.0') && !hostHeader.includes('localhost') ? hostHeader : `127.0.0.1:${PORT}`;
     const baseUrl = `http://${host}`;
 
     const [finRes, newsRes, riskRes] = await Promise.all([
@@ -1161,7 +1166,8 @@ async function fetchLiveStockData(symbol: string, range = '1mo', interval = '1d'
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json'
-      }
+      },
+      signal: AbortSignal.timeout(3500)
     });
 
     if (response.ok) {
@@ -1263,7 +1269,8 @@ async function fetchLiveNews(ticker?: string, category?: string, searchQuery?: s
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json'
-      }
+      },
+      signal: AbortSignal.timeout(3500)
     });
 
     if (response.ok) {
