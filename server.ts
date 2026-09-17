@@ -1112,8 +1112,6 @@ app.post('/api/watchlist/toggle', (req, res) => {
 // LIVE STOCK DATA & CHART API (Yahoo Finance Integration with Fallback)
 // -----------------------------------------------------------------------------
 function generateMockChart(stock: any, range: string) {
-  const points = range === '5d' ? 15 : range === '1mo' ? 30 : range === '3mo' ? 60 : 120;
-  const data = [];
   const symbol = stock.symbol;
   let seed = 0;
   for (let i = 0; i < symbol.length; i++) {
@@ -1124,6 +1122,52 @@ function generateMockChart(stock: any, range: string) {
     return x - Math.floor(x);
   };
 
+  const isLiveOrIntra = range === 'live' || range === '1d';
+  if (isLiveOrIntra) {
+    const points = range === 'live' ? 32 : 26;
+    const data = [];
+    const openPrice = stock.price / (1 + (stock.changePercent || 0) / 100);
+    const startHour = 9;
+    const startMinute = 30;
+    const now = new Date();
+    const liveJitter = range === 'live' ? (Math.random() - 0.49) * (stock.price * 0.0035) : 0;
+    const currentPriceWithJitter = Number((stock.price + liveJitter).toFixed(2));
+
+    for (let i = 0; i < points; i++) {
+      const minutesFromOpen = i * 12;
+      const totalMinutes = startMinute + minutesFromOpen;
+      const hour = startHour + Math.floor(totalMinutes / 60);
+      const min = totalMinutes % 60;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour;
+      const dateStr = `${displayHour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')} ${ampm}`;
+
+      let p: number;
+      if (i === points - 1) {
+        p = currentPriceWithJitter;
+      } else {
+        const progress = i / (points - 1);
+        const intraTrend = openPrice + (currentPriceWithJitter - openPrice) * progress;
+        const wave = Math.sin(i * 0.7 + seed) * (stock.price * 0.012);
+        const noise = (pseudoRandom(i) - 0.48) * (stock.price * 0.007);
+        p = Math.max(1, intraTrend + wave + noise);
+      }
+
+      data.push({
+        timestamp: Math.floor(now.getTime() / 1000) - (points - 1 - i) * 720,
+        date: dateStr,
+        price: Number(p.toFixed(2)),
+        open: Number((p * (1 - (pseudoRandom(i) * 0.003))).toFixed(2)),
+        high: Number((p * 1.004).toFixed(2)),
+        low: Number((p * 0.996).toFixed(2)),
+        volume: Math.round(45000 + pseudoRandom(i) * 320000)
+      });
+    }
+    return data;
+  }
+
+  const points = range === '5d' ? 15 : range === '1mo' ? 30 : range === '3mo' ? 60 : 120;
+  const data = [];
   const overallTrend = (stock.changePercent || 0) / 100;
   const startPrice = stock.price / (1 + overallTrend * 0.8);
   const today = new Date();
@@ -1160,8 +1204,12 @@ function generateMockChart(stock: any, range: string) {
 
 async function fetchLiveStockData(symbol: string, range = '1mo', interval = '1d') {
   const cleanSymbol = symbol.toUpperCase().trim();
+  const isLive = range === 'live' || range === '1d';
+  const queryRange = isLive ? '1d' : range;
+  const queryInterval = isLive ? (range === 'live' ? '2m' : '5m') : (range === '5d' ? '15m' : interval);
+
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSymbol)}?range=${range}&interval=${interval}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(cleanSymbol)}?range=${queryRange}&interval=${queryInterval}`;
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -1184,7 +1232,10 @@ async function fetchLiveStockData(symbol: string, range = '1mo', interval = '1d'
         const volumes: (number | null)[] = quote.volume || [];
 
         const currentPrice = meta.regularMarketPrice ?? meta.chartPreviousClose ?? 0;
-        const previousClose = meta.previousClose ?? meta.chartPreviousClose ?? currentPrice;
+        // `chartPreviousClose` belongs to the selected chart window and can be
+        // several sessions old. For a daily move, always prefer Yahoo's
+        // regular-session close.
+        const previousClose = meta.regularMarketPreviousClose ?? meta.previousClose ?? meta.chartPreviousClose ?? currentPrice;
         const change = currentPrice - previousClose;
         const changePercent = previousClose ? (change / previousClose) * 100 : 0;
 
@@ -1193,7 +1244,9 @@ async function fetchLiveStockData(symbol: string, range = '1mo', interval = '1d'
           const price = closes[i];
           if (price !== null && price !== undefined) {
             const dateObj = new Date(timestamps[i] * 1000);
-            const dateStr = range === '1d' || range === '5d'
+            const dateStr = isLive
+              ? dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              : range === '5d'
               ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
               : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -1233,8 +1286,13 @@ async function fetchLiveStockData(symbol: string, range = '1mo', interval = '1d'
           meta: {
             currency: meta.currency || 'USD',
             exchangeName: meta.exchangeName || 'NASDAQ',
-            isLive: true,
-            lastUpdated: new Date().toISOString()
+            marketState: meta.marketState || 'UNKNOWN',
+            // A chart response may contain the previous close when the market is
+            // shut. Do not present that as a live feed.
+            isLive: ['REGULAR', 'PRE', 'POST', 'PREPRE', 'POSTPOST'].includes(meta.marketState),
+            lastUpdated: meta.regularMarketTime
+              ? new Date(meta.regularMarketTime * 1000).toISOString()
+              : new Date().toISOString()
           }
         };
       }
@@ -1270,7 +1328,7 @@ async function fetchLiveNews(ticker?: string, category?: string, searchQuery?: s
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json'
       },
-      signal: AbortSignal.timeout(3500)
+      signal: AbortSignal.timeout(35000)
     });
 
     if (response.ok) {
@@ -1502,7 +1560,7 @@ app.get('/api/ticker/:symbol', async (req, res) => {
 
 app.get('/api/ticker/:symbol/chart', async (req, res) => {
   const range = (req.query.range as string) || '1mo';
-  const interval = (req.query.interval as string) || (range === '5d' ? '15m' : '1d');
+  const interval = (req.query.interval as string) || (range === 'live' ? '2m' : range === '1d' ? '5m' : range === '5d' ? '15m' : '1d');
   const data = await fetchLiveStockData(req.params.symbol, range, interval);
   res.json(data);
 });
@@ -1515,6 +1573,9 @@ async function startServer() {
 
   if (!isProd) {
     const vite = await createViteServer({
+      // Load the ESM config directly. This avoids esbuild walking inaccessible
+      // parent directories when it bundles the config on Windows.
+      configLoader: 'runner',
       server: { middlewareMode: true },
       appType: 'spa'
     });

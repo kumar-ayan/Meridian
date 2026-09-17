@@ -55,6 +55,7 @@ npm run dev
 
 - **Application URL**: [http://localhost:3000](http://localhost:3000)
 - The server binds to `http://0.0.0.0:3000` and automatically proxies Vite hot-module replacement (HMR).
+- **Live Stock Feed**: Includes real-time `● LIVE` streaming feed (active 4s polling with tick-by-tick micro volatility) and `1D` intraday view alongside standard `5D`, `1M`, `3M`, and `1Y` ranges.
 
 ### Step 3: Available NPM Commands
 

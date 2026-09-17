@@ -1,7 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
   Play,
   BookmarkPlus,
   PlusCircle,
@@ -14,8 +12,7 @@ import {
   Download,
   Maximize2,
   X,
-  Clock,
-  Radio
+  Clock
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, YAxis, XAxis, Tooltip, CartesianGrid } from 'recharts';
 import { StockOverview, MultiAgentPipelineRun } from '../types';
@@ -45,38 +42,57 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
   onAddToPortfolio,
   pipelineRun
 }) => {
-  const isPositive = stock.changePercent >= 0;
-  const strokeColor = isPositive ? '#10b981' : '#f43f5e';
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
-  // Live Chart state
-  const [timeframe, setTimeframe] = useState<'5d' | '1mo' | '3mo' | '1y'>('1mo');
+  type TimeframeOption = '1d' | '5d' | '1mo' | '3mo' | '1y';
+  const [timeframe, setTimeframe] = useState<TimeframeOption>('1d');
   const [liveChartData, setLiveChartData] = useState<any[]>([]);
-  const [chartMeta, setChartMeta] = useState<{ isLive?: boolean; exchangeName?: string; currency?: string; lastUpdated?: string } | null>(null);
+  const [chartMeta, setChartMeta] = useState<{ isLive?: boolean; exchangeName?: string; currency?: string; lastUpdated?: string; marketState?: string } | null>(null);
   const [isLoadingChart, setIsLoadingChart] = useState<boolean>(false);
+  const [chartError, setChartError] = useState<string | null>(null);
   const [showExpandedChart, setShowExpandedChart] = useState<boolean>(false);
 
-  // Fetch live market chart data
+  const latestPrice = stock.price;
+
+  const strokeColor = '#10b981';
+
+  // Load historical chart data only when the ticker or selected range changes.
   useEffect(() => {
     let isMounted = true;
-    setIsLoadingChart(true);
 
-    fetch(`/api/ticker/${stock.symbol}/chart?range=${timeframe}`)
-      .then(res => res.json())
-      .then(data => {
-        if (isMounted) {
-          if (data && Array.isArray(data.chart) && data.chart.length > 0) {
-            setLiveChartData(data.chart);
-            setChartMeta(data.meta || null);
-          } else {
-            setLiveChartData([]);
+    // Never render the prior company's chart while a new watchlist selection
+    // is loading.
+    setLiveChartData([]);
+    setChartMeta(null);
+
+    const fetchChart = (showSpinner = true) => {
+      if (showSpinner) setIsLoadingChart(true);
+      setChartError(null);
+      fetch(`/api/ticker/${stock.symbol}/chart?range=${timeframe}`)
+        .then(res => {
+          if (!res.ok) throw new Error(`Market data request failed (${res.status})`);
+          return res.json();
+        })
+        .then(data => {
+          if (isMounted) {
+            if (data && Array.isArray(data.chart) && data.chart.length > 0) {
+              setLiveChartData(data.chart);
+              setChartMeta(data.meta || null);
+            } else {
+              setChartError('No market data is available for this symbol right now.');
+            }
           }
-        }
-      })
-      .catch(err => console.error('Error loading live chart:', err))
-      .finally(() => {
-        if (isMounted) setIsLoadingChart(false);
-      });
+        })
+        .catch(err => {
+          if (isMounted) setChartError('Could not load chart data. Select another range or try again.');
+          console.error('Error loading chart:', err);
+        })
+        .finally(() => {
+          if (isMounted && showSpinner) setIsLoadingChart(false);
+        });
+    };
+
+    fetchChart(true);
 
     return () => {
       isMounted = false;
@@ -119,7 +135,7 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
     }
   };
 
-  // Fallback sparkline if live data loading
+  // Fallback sparkline while chart data loads
   const fallbackSparkline = useMemo(() => {
     const points = 30;
     const data = [];
@@ -192,17 +208,17 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
 
           {/* Timeframe selector */}
           <div className="hidden sm:flex items-center gap-1 bg-[#161618] p-1 rounded border border-white/10 font-mono text-[10px]">
-            {(['5d', '1mo', '3mo', '1y'] as const).map(tf => (
+            {(['1d', '5d', '1mo', '3mo', '1y'] as const).map(tf => (
               <button
                 key={tf}
                 onClick={() => setTimeframe(tf)}
-                className={`px-2.5 py-1 rounded font-bold uppercase transition-colors ${
+                className={`px-2.5 py-1 rounded font-bold uppercase transition-all flex items-center gap-1 ${
                   timeframe === tf
                     ? 'bg-emerald-500 text-black'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                {tf === '5d' ? '5D' : tf === '1mo' ? '1M' : tf === '3mo' ? '3M' : '1Y'}
+                {tf === '1d' ? '1D' : tf === '5d' ? '5D' : tf === '1mo' ? '1M' : tf === '3mo' ? '3M' : '1Y'}
               </button>
             ))}
           </div>
@@ -219,12 +235,6 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/5 text-slate-400 border border-white/10 uppercase font-mono">
                 {stock.industry}
               </span>
-              {chartMeta?.isLive && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase">
-                  <Radio className="w-2.5 h-2.5 animate-pulse text-emerald-400" />
-                  Live Quote
-                </span>
-              )}
             </div>
             <h1 className="text-xl font-medium text-slate-100 mb-2">{stock.companyName}</h1>
             <p className="text-xs text-slate-400 line-clamp-2 max-w-3xl leading-relaxed">{stock.description}</p>
@@ -238,31 +248,23 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
                 {chartMeta?.exchangeName && <span className="text-[9px] text-slate-600">({chartMeta.exchangeName})</span>}
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-light font-mono text-white">${stock.price.toFixed(2)}</span>
-                <span
-                  className={`flex items-center text-xs font-bold font-mono ${
-                    stock.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  }`}
-                >
-                  {stock.changePercent >= 0 ? <TrendingUp className="w-3.5 h-3.5 mr-0.5" /> : <TrendingDown className="w-3.5 h-3.5 mr-0.5" />}
-                  {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                </span>
+                <span className="text-2xl font-light font-mono text-white">${latestPrice.toFixed(2)}</span>
               </div>
             </div>
 
             <div className="h-10 w-px bg-white/10 hidden sm:block" />
 
-            {/* Live Interactive Sparkline Chart */}
+            {/* Historical price chart */}
             <div className="w-44 h-14 flex flex-col justify-between group relative">
               <div className="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-wider font-mono">
                 <span className="flex items-center gap-1">
-                  <span>{timeframe.toUpperCase()} Chart</span>
-                  {isLoadingChart && <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
+                  <span>{timeframe === '1d' ? '1D' : timeframe === '5d' ? '5D' : timeframe === '1mo' ? '1M' : timeframe === '3mo' ? '3M' : '1Y'} Chart</span>
+                      {isLoadingChart && <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
                 </span>
                 <button
                   onClick={() => setShowExpandedChart(!showExpandedChart)}
                   className="text-slate-400 hover:text-emerald-400 transition-colors p-0.5 rounded hover:bg-white/5"
-                  title="Expand Live Interactive Chart"
+                  title="Expand price chart"
                 >
                   <Maximize2 className="w-3 h-3" />
                 </button>
@@ -307,6 +309,7 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+              {chartError && <span className="sr-only" role="status">{chartError}</span>}
             </div>
 
             <div className="h-10 w-px bg-white/10 hidden sm:block" />
@@ -342,13 +345,12 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
                 <BarChart3 className="w-5 h-5 text-emerald-400" />
                 <div>
                   <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
-                    {stock.symbol} — Live Market Price & Volume Chart
+                    {stock.symbol} — Price & Volume Chart
                   </h3>
                   <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                    <span>Range: {timeframe.toUpperCase()}</span>
+                    <span>Range: {timeframe === '1d' ? '1 DAY' : timeframe === '5d' ? '5 DAYS' : timeframe === '1mo' ? '1 MONTH' : timeframe === '3mo' ? '3 MONTHS' : '1 YEAR'}</span>
                     <span>•</span>
-                    <span className="text-emerald-400 font-bold">${stock.price.toFixed(2)}</span>
-                    <span>({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)</span>
+                    <span className="text-emerald-400 font-bold">${latestPrice.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -356,17 +358,17 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
               <div className="flex items-center gap-3">
                 {/* Timeframe Buttons */}
                 <div className="flex items-center gap-1 bg-[#0e0e10] p-1 rounded border border-white/10 font-mono text-xs">
-                  {(['5d', '1mo', '3mo', '1y'] as const).map(tf => (
+                  {(['1d', '5d', '1mo', '3mo', '1y'] as const).map(tf => (
                     <button
                       key={tf}
                       onClick={() => setTimeframe(tf)}
-                      className={`px-3 py-1 rounded font-bold uppercase transition-colors ${
+                      className={`px-3 py-1 rounded font-bold uppercase transition-all flex items-center gap-1.5 ${
                         timeframe === tf
                           ? 'bg-emerald-500 text-black'
                           : 'text-slate-400 hover:text-white hover:bg-white/5'
                       }`}
                     >
-                      {tf === '5d' ? '5 Days' : tf === '1mo' ? '1 Month' : tf === '3mo' ? '3 Months' : '1 Year'}
+                      {tf === '1d' ? '1 Day' : tf === '5d' ? '5 Days' : tf === '1mo' ? '1 Month' : tf === '3mo' ? '3 Months' : '1 Year'}
                     </button>
                   ))}
                 </div>
@@ -497,5 +499,3 @@ export const TickerHeader: React.FC<TickerHeaderProps> = ({
     </div>
   );
 };
-
-

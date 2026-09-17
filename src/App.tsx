@@ -24,29 +24,49 @@ export default function App() {
   const [portfolio, setPortfolio] = useState<PortfolioHolding[]>([]);
   const [watchlist, setWatchlist] = useState<string[]>(['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMZN', 'GOOGL', 'META']);
 
-  // Fetch stock details when ticker changes
+  // Refresh the selected quote while the dashboard remains open. The header chart
+  // has its own intraday series; this keeps the headline quote and watchlist chip
+  // in sync with it as well.
   useEffect(() => {
-    fetchStockDetails(selectedTicker);
+    const controller = new AbortController();
+    let isCurrent = true;
+
+    // Change the visible company immediately. The API response replaces this
+    // local fallback as soon as it arrives, but a temporary network issue must
+    // never leave the previous company's details on screen.
+    setStockOverview(getMockStockOverview(selectedTicker));
+
+    const refreshStock = async () => {
+      try {
+        const res = await fetch(`/api/ticker/${selectedTicker}`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Quote request failed (${res.status})`);
+
+        const data = await res.json();
+        if (isCurrent) {
+          setStockOverview(data);
+          setPopularStocks(current => current.map(stock => stock.symbol === data.symbol ? data : stock));
+        }
+      } catch (error) {
+        if (isCurrent && !(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Failed to refresh stock quote:', error);
+        }
+      }
+    };
+
+    refreshStock();
+    const refreshTimer = window.setInterval(refreshStock, 15_000);
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+      window.clearInterval(refreshTimer);
+    };
   }, [selectedTicker]);
 
   // Load initial portfolio on mount
   useEffect(() => {
     fetchPortfolio();
   }, []);
-
-  const fetchStockDetails = async (symbol: string) => {
-    try {
-      const res = await fetch(`/api/ticker/${symbol}`);
-      if (res.ok) {
-        const data = await res.json();
-        setStockOverview(data);
-      } else {
-        setStockOverview(getMockStockOverview(symbol));
-      }
-    } catch {
-      setStockOverview(getMockStockOverview(symbol));
-    }
-  };
 
   const fetchPortfolio = async () => {
     try {
@@ -58,6 +78,11 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch portfolio:', err);
     }
+  };
+
+  const handleSelectTicker = (symbol: string) => {
+    const nextTicker = symbol.trim().toUpperCase();
+    if (nextTicker) setSelectedTicker(nextTicker);
   };
 
   // Run the full 6-agent orchestration pipeline
@@ -126,7 +151,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedTicker={selectedTicker}
-        onSelectTicker={setSelectedTicker}
+        onSelectTicker={handleSelectTicker}
         popularStocks={popularStocks}
         watchlist={watchlist}
       />
@@ -136,7 +161,7 @@ export default function App() {
         stock={stockOverview}
         popularStocks={popularStocks}
         selectedTicker={selectedTicker}
-        onSelectTicker={setSelectedTicker}
+        onSelectTicker={handleSelectTicker}
         onRunOrchestrator={handleRunOrchestrator}
         isRunningPipeline={isRunningPipeline}
         isInWatchlist={watchlist.includes(selectedTicker)}
@@ -179,7 +204,7 @@ export default function App() {
         {activeTab === 'news' && (
           <LiveNewsFeed
             selectedTicker={selectedTicker}
-            onSelectTicker={(symbol) => setSelectedTicker(symbol)}
+            onSelectTicker={handleSelectTicker}
             onRunOrchestrator={() => {
               setActiveTab('research');
               handleRunOrchestrator();
@@ -194,7 +219,7 @@ export default function App() {
             portfolio={portfolio}
             onAddPosition={handleAddPortfolioPosition}
             onSelectTicker={(symbol) => {
-              setSelectedTicker(symbol);
+              handleSelectTicker(symbol);
               setActiveTab('research');
             }}
           />

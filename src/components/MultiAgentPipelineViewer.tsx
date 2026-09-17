@@ -92,7 +92,7 @@ export const MultiAgentPipelineViewer: React.FC<MultiAgentPipelineViewerProps> =
           <div className="w-px h-6 bg-white/5" />
           <div>
             <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Architecture</span>
-            <span className="text-slate-200">OpenAI SDK + Structured Outputs</span>
+            <span className="text-slate-200">Gemini SDK + Structured Outputs</span>
           </div>
         </div>
       </div>

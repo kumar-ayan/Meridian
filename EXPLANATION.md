@@ -26,7 +26,7 @@ Meridian provides financial analysts, portfolio managers, and retail investors w
 6. **n8n Automation Hub**: Triggers automated webhooks, visualizes node graph workflows, and exports workflow JSON definitions.
 7. **Executive PDF Export**: Generates downloadable, multi-page executive research reports in standard PDF format.## ⚙️ How Meridian Works: Architecture & Data Flow
 
-![System Architecture & Data Flow](assets/data_flow.png)�─────────┴──────────┬──────────┴─────────────────────┘
+![System Architecture & Data Flow](assets/data_flo w.png)�─────────┴──────────┬──────────┴─────────────────────┘
                                              │ HTTP REST Requests
                                   ┌──────────▼──────────┐
                                   │ Express.js Server   │ (server.ts)
